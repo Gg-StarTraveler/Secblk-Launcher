@@ -1,0 +1,39 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  compile:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 配置 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 编译源码
+        run: javac -encoding UTF-8 Launcher.java
+
+      - name: 打包 jar
+        run: jar cfe Launcher.jar Launcher Launcher*.class
+
+      - name: 检查敏感文件未被提交
+        shell: pwsh
+        run: |
+          $forbidden = @('data', 'Game', 'game.pack', 'Game.zip')
+          $found = $false
+          foreach ($f in $forbidden) {
+            if (Test-Path $f) {
+              Write-Host "::error::禁止提交 $f（该路径应被 .gitignore 排除）"
+              $found = $true
+            }
+          }
+          if ($found) { exit 1 }
+          Write-Host "敏感文件检查通过"
